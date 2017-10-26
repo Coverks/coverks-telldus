@@ -1,0 +1,5 @@
+{
+    "require": {
+        "paxx/telldus-live": "^1.0"
+    }
+}
