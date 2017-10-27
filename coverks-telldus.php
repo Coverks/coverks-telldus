@@ -55,6 +55,7 @@ function coverks_update_sensors() {
 			'post_author'       => 1,
 			'post_type'         => 'telldus-sensor',
 			'post_modified_gmt' => date( "Y-m-d H:i:s", $sensor_info['lastUpdated'] ),
+			'post_content'      => json_encode( $sensor_info['data'] ),
 		);
 
 		if ( $old_post ) {
@@ -62,15 +63,17 @@ function coverks_update_sensors() {
 			if ( get_post_meta( $old_post[0]->ID, 'telldus_sensor_lastUpdated', true ) == $sensor_info['lastUpdated'] ) {
 				continue;
 			}
-			$my_post["ID"] = $old_post[0]->ID;
+			$my_post["post_date_gmt"] = date( "Y-m-d H:i:s", $sensor_info['lastUpdated'] );
+			$my_post["ID"]            = $old_post[0]->ID;
+			$new_post_id              = wp_update_post( $my_post );
 		} else {
+			$new_post_id              = wp_insert_post( $my_post );
 			$my_post["post_date_gmt"] = date( "Y-m-d H:i:s", $sensor_info['lastUpdated'] );
 		}
 
-		$new_post_id = wp_insert_post( $my_post );
 
-		foreach ($sensor_info as $key => $info) {
-			if ('data' == $key) {
+		foreach ( $sensor_info as $key => $info ) {
+			if ( 'data' == $key ) {
 				foreach ( $info as $data ) {
 					if ( ! add_post_meta( $new_post_id, "telldus_sensor_" . $data['name'], $data['value'], true ) ) {
 						update_post_meta( $new_post_id, "telldus_sensor_" . $data['name'], $data['value'] );
@@ -87,9 +90,8 @@ function coverks_update_sensors() {
 	}
 }
 
-add_action( 'init', 'coverks_update_sensors' );
 
-
+//add_action( 'init', 'coverks_update_sensors' );
 add_action( 'init', 'coverks_telldus_sensor_init' );
 /**
  * Register a sensor post type.
@@ -127,7 +129,7 @@ function coverks_telldus_sensor_init() {
 		'has_archive'        => true,
 		'hierarchical'       => false,
 		'menu_position'      => null,
-		'supports'           => array( 'title', 'custom-fields', 'revisions' )
+		'supports'           => array( 'title', 'custom-fields', 'revisions', 'editor' )
 	);
 
 	register_post_type( 'telldus-sensor', $args );
@@ -170,7 +172,7 @@ function coverks_telldus_device_init() {
 		'has_archive'        => true,
 		'hierarchical'       => false,
 		'menu_position'      => null,
-		'supports'           => array( 'title', 'custom-fields', 'revisions' )
+		'supports'           => array( 'title', 'custom-fields', 'revisions', 'editor' )
 	);
 
 	register_post_type( 'telldus-device', $args );
@@ -189,3 +191,67 @@ function coverks_telldus_admin_menu() {
 }
 
 add_action( 'admin_menu', 'coverks_telldus_admin_menu' );
+
+add_action( 'manage_telldus-sensor_posts_custom_column' , 'custom_columns', 10, 2 );
+
+function custom_columns( $column, $post_id ) {
+	switch ( $column ) {
+		case 'temperature':
+			$temperature = get_post_meta( $post_id, 'telldus_sensor_temp', true );
+			if (  $temperature  ) {
+				echo $temperature . "&deg;C";
+			}
+			break;
+
+		case 'humidity':
+			$humidity = get_post_meta( $post_id, 'telldus_sensor_humidity', true );
+			if (  $humidity  ) {
+				echo $humidity . "%";
+			}
+			break;
+	}
+}
+
+add_filter( 'manage_edit-telldus-sensor_columns', 'my_edit_telldus_sensor_columns' ) ;
+
+function my_edit_telldus_sensor_columns( $columns ) {
+
+	$columns = array(
+		'cb' => '<input type="checkbox" />',
+		'title' => __( 'Sensor' ),
+		'temperature' => __( 'Temperature' ),
+		'humidity' => __( 'Humidity' ),
+		'date' => __( 'Date' )
+	);
+
+	return $columns;
+}
+
+/* CRON JOB */
+
+add_filter('cron_schedules', 'new_interval');
+
+// add once 10 minute interval to wp schedules
+function new_interval($interval) {
+
+	$interval['minutes_10'] = array('interval' => 10*60, 'display' => 'Once 10 minutes');
+
+	return $interval;
+}
+
+register_activation_hook(__FILE__, 'my_activation');
+
+function my_activation() {
+	if (! wp_next_scheduled ( 'telldus_cron_job' )) {
+		wp_schedule_event(time(), 'minutes_10', 'telldus_cron_job');
+	}
+}
+
+add_action('telldus_cron_job', 'coverks_update_sensors');
+
+
+register_deactivation_hook(__FILE__, 'my_deactivation');
+
+function my_deactivation() {
+	wp_clear_scheduled_hook('telldus_cron_job');
+}
