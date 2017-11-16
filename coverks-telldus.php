@@ -11,7 +11,7 @@ Version: 0.1a
 Author URI: http://hauan.me
 */
 
-function coverks_update_sensors() {
+function coverks_telldus_api() {
 	require_once( 'vendor/autoload.php' );
 
 
@@ -22,5 +22,5 @@ function coverks_update_sensors() {
 		'user_secret'     => 'd6e38b68500972fe8295918c166350d6'
 	) );
 
-
+	return $api;
 }
