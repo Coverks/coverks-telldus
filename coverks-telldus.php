@@ -52,6 +52,6 @@ function coverks_telldus_get_outside_info() {
 		'user_secret'     => 'd6e38b68500972fe8295918c166350d6'
 	) );
 
-	return $api->sensors();
+	return $api->sensor(1310523);
 
 }
