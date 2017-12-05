@@ -57,6 +57,7 @@ function coverks_telldus_get_outside_info() {
 	$return_valie = [
 		"temperature" => $sensor_info['data'][0]['value'],
 		"humidity" => $sensor_info['data'][1]['value'],
+		"updated" => $sensor_info['data'][1]['lastUpdated'],
 	];
 	return $return_valie;
 
@@ -78,6 +79,7 @@ function coverks_telldus_get_inside_info() {
 	$return_valie = [
 		"temperature" => $sensor_info['data'][0]['value'],
 		"humidity" => $sensor_info['data'][1]['value'],
+		"updated" => $sensor_info['data'][1]['lastUpdated'],
 	];
 	return $return_valie;
 
